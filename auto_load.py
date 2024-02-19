@@ -1,5 +1,7 @@
 # by JacquesLucke / Animation Nodes
+# by xuxing
 import bpy
+import sys
 import typing
 import inspect
 import pkgutil
@@ -29,6 +31,7 @@ def init():
 def register():
     for cls in ordered_classes:
         bpy.utils.register_class(cls)
+        #print("reg: " + cls.__class__.__name__)
 
     for module in modules:
         if module.__name__ == __name__:
@@ -47,6 +50,13 @@ def unregister():
         if hasattr(module, "unregister"):
             module.unregister()
 
+def cleanse_modules(plugin_module_name):
+    """call on unregister for hot reload, so plugin source can be reload just by deactivating/activating the plugin.
+    plugin module name is typically the __name__ var in the __init__.py file"""
+
+    for module_name in sorted(sys.modules.keys()):
+        if module_name.startswith(plugin_module_name):
+            del sys.modules[module_name]
 
 # Import modules
 #################################################

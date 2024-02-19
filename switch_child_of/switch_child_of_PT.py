@@ -2,11 +2,11 @@ import bpy
 from bpy.types import Panel
 
 
-class x_anim_PT_utilities(Panel):
+class x_anim_PT_switch_child_of(Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "x anim"
-    bl_label = "Utilities"
+    bl_label = "Switch Child Of"
 
 
     def draw(self, context):

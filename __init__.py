@@ -10,6 +10,7 @@ bl_info = {
 }
 
 import bpy
+import sys
 from . import auto_load
 from . import properties
 
@@ -20,10 +21,14 @@ def register():
 
     bpy.types.Scene.x_anim = bpy.props.PointerProperty(type=properties.x_anim_properties)
 
+
 def unregister():
     auto_load.unregister()
 
+    auto_load.cleanse_modules(__name__)
+
     del bpy.types.Scene.x_anim
+
 
 # This allows you to run the script directly from Blender's Text editor
 # to test the add-on without having to install it.

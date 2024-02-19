@@ -1,7 +1,7 @@
-from .utils import *
-from .tools_sub import *
-from bpy.types import Operator
-
+from typing import Set
+from ..utils import *
+from bpy.types import Context, Operator
+from . import switch_child_of_utils
 
 class x_anim_OT_switch_child_of(Operator):
     bl_idname = "x_anim.switch_child_of"
@@ -116,7 +116,7 @@ class x_anim_OT_switch_child_of(Operator):
 
     def execute(self, context):
         if self.bake_type == 'STATIC':
-            child_of_utils.switch_child_of(self)
+            switch_child_of_utils.switch_child_of(self)
         elif self.bake_type == 'ANIM':
-            child_of_utils.bake_switch_child_of(self)
+            switch_child_of_utils.bake_switch_child_of(self)
         return {'FINISHED'}
