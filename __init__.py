@@ -9,16 +9,21 @@ bl_info = {
     "category": "Animation"
 }
 
+import bpy
 from . import auto_load
+from . import properties
 
 auto_load.init()
 
 def register():
     auto_load.register()
 
+    bpy.types.Scene.x_anim = bpy.props.PointerProperty(type=properties.x_anim_properties)
 
 def unregister():
     auto_load.unregister()
+
+    del bpy.types.Scene.x_anim
 
 # This allows you to run the script directly from Blender's Text editor
 # to test the add-on without having to install it.
