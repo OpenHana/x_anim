@@ -4,7 +4,7 @@ from .. import ui_utils
 
 class x_anim_OT_synced_mocap_connect(Operator):
     bl_idname = "x_anim.synced_mocap_connect"
-    bl_label = "Connect"
+    bl_label = "Synced Mocap Connect"
     bl_description = "Activate multiple mocap systems at once, (FaceIt, VMC4B)"
 
     @classmethod
