@@ -136,8 +136,11 @@ def get_world_location(obj):
     return obj.matrix_world.to_translation()
 
 
-def get_world_location_of_pose_bone(pose_bone):
-    return pose_bone.id_data.matrix_world @ pose_bone.matrix @ pose_bone.location
+def get_world_position_of_pose_bone(pose_bone : bpy.types.PoseBone):
+    return (pose_bone.id_data.matrix_world @ pose_bone.matrix).to_translation()
+
+def get_world_position_of_pose_bone_tail(pose_bone : bpy.types.PoseBone):
+    return pose_bone.id_data.matrix_world @ pose_bone.tail
 
 
 
@@ -184,11 +187,54 @@ def load_pose(action, bone_name):
     return {"location": mathutils.Vector(location), "rotation_quaternion": mathutils.Quaternion(rotation_quaternion)}
 
 
+# set position at current frame
+def set_bone_position(bone : bpy.types.PoseBone, pos, world_space = False, key = True):
+    if pos == None:
+        print("Bone position shouldn't be none!")
+        return
+
+    if world_space:
+
+        armature : bpy.types.Armature = bone.id_data
+
+        matrix_world = armature.convert_space(pose_bone=bone, 
+            matrix=bone.matrix, 
+            from_space='POSE', 
+            to_space='WORLD')
+        matrix_world.translation = pos
+
+        has_child_of_constraint = False
+        parent_matrix = None
+        # TODO: only consider the condition when it has subtarget and influence == 1 for now.
+        for c in bone.constraints: 
+            if c.type == 'CHILD_OF' and c.target != None and c.influence >= 0.99:
+                has_child_of_constraint = True
+                parent_bone = get_pose_bone(c.target, c.subtarget)
+                parent_matrix = c.inverse_matrix.inverted() @ parent_bone.matrix.inverted()
+
+
+        if has_child_of_constraint:
+            bone.matrix = parent_matrix @ matrix_world
+        else:
+            bone.matrix = armature.convert_space(pose_bone=bone, 
+            matrix=matrix_world, 
+            from_space='WORLD', 
+            to_space='POSE')
+               
+    else:
+        bone.location = pos
+
+    if key:
+        bone.keyframe_insert('location')
+
+'''
+# LEGACY
 # [start, end - 1] 
 def set_bone_pose(bone, pose, start, end, world_space = False, armature = None):
     set_bone_position(bone, pose["location"], start, end, world_space, armature)
     set_rotation(bone, pose["rotation_quaternion"], start, end)
 
+# LEGACY
 # [start, end - 1] 
 def set_bone_position(bone, pos, start, end, world_space = False, armature = None):
     if pos == None:
@@ -238,6 +284,8 @@ def set_bone_position(bone, pos, start, end, world_space = False, armature = Non
     bone.keyframe_insert('location', frame=end - 1)
     # print(f"set {bone} to {pos} at {start}-{end}")
 
+
+# LEGACY
 # [start, end - 1] 
 def set_rotation(bone, quaternion, start, end):
     if quaternion == None:
@@ -251,4 +299,4 @@ def set_rotation(bone, quaternion, start, end):
     bone.keyframe_insert('rotation_quaternion', frame=start)
     bone.keyframe_insert('rotation_quaternion', frame=end - 1)
     # print(f"set {bone} to {quaternion} at {start}-{end}")
-
+'''

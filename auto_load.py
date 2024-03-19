@@ -1,5 +1,37 @@
 # by JacquesLucke / Animation Nodes
-# by xuxing
+# modified by xuxing
+
+# example, in plugin's __init__.py:
+'''
+import bpy
+import sys
+from . import auto_load
+from . import properties
+
+auto_load.init()
+
+def register():
+    auto_load.register()
+
+    bpy.types.Scene.x_anim = bpy.props.PointerProperty(type=properties.x_anim_properties)
+
+
+def unregister():
+    auto_load.unregister()
+
+    auto_load.cleanse_modules(__name__)
+
+    del bpy.types.Scene.x_anim
+
+
+# This allows you to run the script directly from Blender's Text editor
+# to test the add-on without having to install it.
+if __name__ == "__main__":
+    register()
+
+'''
+# in each module, if register() and unregister() function are present, they will be called
+
 import bpy
 import sys
 import typing
