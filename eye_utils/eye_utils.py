@@ -9,22 +9,10 @@ from typing import Callable
 #
 
 def eye_ctrls_insert_keyframe(cur_frame):
-    bones = bpy.context.active_object.pose.bones
-    bones['c_eye.L'].keyframe_insert('location',frame=cur_frame)
-    bones['c_eye.R'].keyframe_insert('location',frame=cur_frame)
-    bones['c_eye_lookat'].keyframe_insert('location',frame=cur_frame)
+    bones_insert_keyframe(['c_eye.L', 'c_eye.R', 'c_eye_lookat'], cur_frame)
 
 def eye_ctrls_bake(start_frame, end_frame, progress : Callable[[int, int], None]):
-
-    total_frames = int(end_frame - start_frame + 1)
-
-    for i in range(total_frames):
-        cur_frame = i + start_frame
-        bpy.context.scene.frame_set(cur_frame) # is this really needed?
-        eye_ctrls_insert_keyframe(cur_frame)
-
-        if callable(progress):
-            progress(i, total_frames)
+    bones_bake(['c_eye.L', 'c_eye.R', 'c_eye_lookat'], start_frame, end_frame, progress)
 
 def bones_insert_keyframe(bone_names : list, cur_frame):
 
@@ -56,7 +44,7 @@ class x_anim_eye_utils_properties(bpy.types.PropertyGroup):
     start_frame : bpy.props.IntProperty(name="start frame")
     end_frame : bpy.props.IntProperty(name="end frame")
 
-class x_anim_OT_center_eye_lookat(Operator):
+class X_ANIM_OT_center_eye_lookat(Operator):
     bl_idname = "x_anim.center_eye_lookat"
     bl_label = "Center c_eye_lookat"
     bl_description = "Put c_eye_lookat at the center of c_eye.L and c_eye.R, when using FaceIt mocap, only c_eye.L/R will move, which is a little inconvinient"
@@ -118,9 +106,9 @@ class x_anim_OT_center_eye_lookat(Operator):
 ## eye_ctrl to eye_target
 ##
    
-class x_anim_OT_eye_ctrl_to_eye_target(Operator):
+class X_ANIM_OT_eye_ctrl_to_eye_target(Operator):
     bl_idname = "x_anim.eye_ctrl_to_eye_target"
-    bl_label = "eye_ctrl to eye_target"
+    bl_label = "Eye Ctrl → Eye Target"
     bl_description = "snap eye_target to the result of eye_ctrl"
 
     @classmethod
@@ -175,6 +163,125 @@ class x_anim_OT_eye_ctrl_to_eye_target(Operator):
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
 
+##
+## Eye convergence
+##
+    
+class X_ANIM_OT_eye_distance_to_convergence(Operator):
+    bl_idname = "x_anim.eye_distance_to_convergence"
+    bl_label = "Eye Distance → Convergence"
+    bl_description = "Convert distance of c_eye.L/R to convergence value"
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context: Context):
+
+        props = bpy.context.scene.x_anim_eye_utils
+        start_frame = props.start_frame
+        end_frame = props.end_frame
+        total_frames = int(end_frame - start_frame + 1)
+
+        bones = bpy.context.view_layer.objects.active.pose.bones
+
+        ui_utils.progress_begin()
+
+        # bake the curve to ensure that the evaluated values of subsequent frames 
+        # are not affected by inserting new frames
+        # add 1 keyframe before start and after end to protect the curve outside the given frame range
+        bones_bake(['c_eye.L', 'c_eye.R', 'c_eye_convergence_slider'], start_frame - 1, end_frame + 1, ui_utils.progress_update)
+
+        for i in range(total_frames):
+
+            cur_frame = i + start_frame
+            bpy.context.scene.frame_set(cur_frame)
+
+            convergence = (-bones['c_eye.L'].location.x + bones['c_eye.R'].location.x) / 10.0 # 10 = 5 * 2, 5 is the most each c_eye can move
+
+            bones['c_eye_convergence_slider'].location.y = convergence * 4.0
+            bones['c_eye.L'].location.x = 0
+            bones['c_eye.R'].location.x = 0
+
+            bones_insert_keyframe(['c_eye.L', 'c_eye.R', 'c_eye_convergence_slider'], cur_frame)
+
+            ui_utils.progress_update(i, total_frames)
+
+        ui_utils.progress_end()
+
+        return {'FINISHED'}
+    
+    def draw(self, context):
+        layout = self.layout
+
+        props = bpy.context.scene.x_anim_eye_utils
+
+        row = layout.row()
+
+        row.prop(props, "start_frame")
+        row.prop(props, "end_frame")
+    
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+class X_ANIM_OT_eye_target_distance_to_convergence(Operator):
+    bl_idname = "x_anim.eye_target_distance_to_convergence"
+    bl_label = "Eye Target Distance → Convergence"
+    bl_description = "Convert distance of c_x_eye_target.L/R to convergence value"
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context: Context):
+
+        props = bpy.context.scene.x_anim_eye_utils
+        start_frame = props.start_frame
+        end_frame = props.end_frame
+        total_frames = int(end_frame - start_frame + 1)
+
+        bones = bpy.context.view_layer.objects.active.pose.bones
+
+        ui_utils.progress_begin()
+
+        # bake the curve to ensure that the evaluated values of subsequent frames 
+        # are not affected by inserting new frames
+        # add 1 keyframe before start and after end to protect the curve outside the given frame range
+        bones_bake(['c_x_eye_target.l', 'c_x_eye_target.r', 'c_eye_target_convergence_slider'], start_frame - 1, end_frame + 1, ui_utils.progress_update)
+
+        for i in range(total_frames):
+
+            cur_frame = i + start_frame
+            bpy.context.scene.frame_set(cur_frame)
+
+            convergence = (-bones['c_x_eye_target.l'].location.x + bones['c_x_eye_target.r'].location.x) / 6.4 # 6.4 = 3.2 * 2, 3.2 is the most each c_x_eye_target can move
+
+            bones['c_eye_target_convergence_slider'].location.y = convergence * 4.0
+            bones['c_x_eye_target.l'].location.x = 0
+            bones['c_x_eye_target.r'].location.x = 0
+
+            bones_insert_keyframe(['c_x_eye_target.l', 'c_x_eye_target.r', 'c_eye_target_convergence_slider'], cur_frame)
+
+            ui_utils.progress_update(i, total_frames)
+
+        ui_utils.progress_end()
+
+        return {'FINISHED'}
+    
+    def draw(self, context):
+        layout = self.layout
+
+        props = bpy.context.scene.x_anim_eye_utils
+
+        row = layout.row()
+
+        row.prop(props, "start_frame")
+        row.prop(props, "end_frame")
+    
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+
 #
 # panel
 #
@@ -191,9 +298,13 @@ class x_anim_PT_eye_utils(Panel):
         props = bpy.context.scene.x_anim
 
         row = layout.row()
-        ui_utils.default_operator_button(row, x_anim_OT_center_eye_lookat)
+        ui_utils.default_operator_button(row, X_ANIM_OT_center_eye_lookat)
         row = layout.row()
-        ui_utils.default_operator_button(row, x_anim_OT_eye_ctrl_to_eye_target)
+        ui_utils.default_operator_button(row, X_ANIM_OT_eye_ctrl_to_eye_target)
+        row = layout.row()
+        ui_utils.default_operator_button(row, X_ANIM_OT_eye_distance_to_convergence)
+        row = layout.row()
+        ui_utils.default_operator_button(row, X_ANIM_OT_eye_target_distance_to_convergence)
 
 #
 # register
