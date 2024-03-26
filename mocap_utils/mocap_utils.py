@@ -6,6 +6,7 @@ class x_anim_OT_synced_mocap_connect(Operator):
     bl_idname = "x_anim.synced_mocap_connect"
     bl_label = "Synced Mocap Connect"
     bl_description = "Activate multiple mocap systems at once, (FaceIt, VMC4B)"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -21,6 +22,7 @@ class x_anim_OT_synced_mocap_disconnect(Operator):
     bl_idname = "x_anim.synced_mocap_disconnect"
     bl_label = "Synced Mocap Disconnect"
     bl_description = "disconnect multiple mocap systems at once, (FaceIt, VMC4B)"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -36,6 +38,7 @@ class x_anim_OT_synced_mocap_start(Operator):
     bl_idname = "x_anim.synced_mocap_start"
     bl_label = "Synced Mocap Start"
     bl_description = "Activate multiple mocap systems at once, (FaceIt, VMC4B)"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -53,6 +56,7 @@ class x_anim_OT_synced_mocap_stop(Operator):
     bl_idname = "x_anim.synced_mocap_stop"
     bl_label = "Synced Mocap Stop"
     bl_description = "Stop multiple mocap systems at once, (FaceIt, VMC4B)"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):

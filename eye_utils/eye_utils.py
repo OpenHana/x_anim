@@ -48,6 +48,7 @@ class X_ANIM_OT_center_eye_lookat(Operator):
     bl_idname = "x_anim.center_eye_lookat"
     bl_label = "Center c_eye_lookat"
     bl_description = "Put c_eye_lookat at the center of c_eye.L and c_eye.R, when using FaceIt mocap, only c_eye.L/R will move, which is a little inconvinient"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -110,6 +111,7 @@ class X_ANIM_OT_eye_ctrl_to_eye_target(Operator):
     bl_idname = "x_anim.eye_ctrl_to_eye_target"
     bl_label = "Eye Ctrl → Eye Target"
     bl_description = "snap eye_target to the result of eye_ctrl"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -171,6 +173,7 @@ class X_ANIM_OT_eye_distance_to_convergence(Operator):
     bl_idname = "x_anim.eye_distance_to_convergence"
     bl_label = "Eye Distance → Convergence"
     bl_description = "Convert distance of c_eye.L/R to convergence value"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -228,6 +231,7 @@ class X_ANIM_OT_eye_target_distance_to_convergence(Operator):
     bl_idname = "x_anim.eye_target_distance_to_convergence"
     bl_label = "Eye Target Distance → Convergence"
     bl_description = "Convert distance of c_x_eye_target.L/R to convergence value"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
