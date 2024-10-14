@@ -11,7 +11,7 @@ from typing import Callable
 def eye_ctrls_insert_keyframe(cur_frame):
     bones_insert_keyframe(['c_eye.L', 'c_eye.R', 'c_eye_lookat'], cur_frame)
 
-def eye_ctrls_bake(start_frame, end_frame, progress : Callable[[int, int], None]):
+def eye_ctrls_bake(start_frame, end_frame, progress : ui_utils.ProgressCallback = None):
     bones_bake(['c_eye.L', 'c_eye.R', 'c_eye_lookat'], start_frame, end_frame, progress)
 
 def bones_insert_keyframe(bone_names : list, cur_frame):
@@ -19,15 +19,16 @@ def bones_insert_keyframe(bone_names : list, cur_frame):
     bones = bpy.context.active_object.pose.bones
 
     for bone_name in bone_names:
-        bones[bone_name].keyframe_insert('location', frame=cur_frame)
+        bones[bone_name].keyframe_insert('location', frame=cur_frame, group=bone_name)
 
-def bones_bake(bone_names : list, start_frame, end_frame, progress : Callable[[int, int], None]):
+def bones_bake(bone_names : list, start_frame, end_frame, progress : ui_utils.ProgressCallback = None):
     
     total_frames = int(end_frame - start_frame + 1)
 
     for i in range(total_frames):
         cur_frame = i + start_frame
-        bpy.context.scene.frame_set(cur_frame) # is this really needed?
+        #bpy.context.scene.frame_set(cur_frame)
+        utils.set_frame_fast(cur_frame)
         bones_insert_keyframe(bone_names, cur_frame)
 
         if callable(progress):
@@ -73,7 +74,8 @@ class X_ANIM_OT_center_eye_lookat(Operator):
         for i in range(total_frames):
 
             cur_frame = i + start_frame
-            bpy.context.scene.frame_set(cur_frame)
+            #bpy.context.scene.frame_set(cur_frame)
+            utils.set_frame_fast(cur_frame)
 
             center = (bones['c_eye.L'].location + bones['c_eye.R'].location) / 2.0
 
@@ -136,7 +138,8 @@ class X_ANIM_OT_eye_ctrl_to_eye_target(Operator):
         for i in range(total_frames):
 
             cur_frame = i + start_frame
-            bpy.context.scene.frame_set(cur_frame)
+            #bpy.context.scene.frame_set(cur_frame)
+            utils.set_frame_fast(cur_frame)
 
             central_location = utils.get_world_position_of_pose_bone(bones["x_actual_eye_target"])
             left_location = utils.get_world_position_of_pose_bone_tail(bones["x_actual_line_of_sight.l"])
@@ -198,7 +201,8 @@ class X_ANIM_OT_eye_distance_to_convergence(Operator):
         for i in range(total_frames):
 
             cur_frame = i + start_frame
-            bpy.context.scene.frame_set(cur_frame)
+            #bpy.context.scene.frame_set(cur_frame)
+            utils.set_frame_fast(cur_frame)
 
             convergence = (-bones['c_eye.L'].location.x + bones['c_eye.R'].location.x) / 10.0 # 10 = 5 * 2, 5 is the most each c_eye can move
 
@@ -256,7 +260,8 @@ class X_ANIM_OT_eye_target_distance_to_convergence(Operator):
         for i in range(total_frames):
 
             cur_frame = i + start_frame
-            bpy.context.scene.frame_set(cur_frame)
+            #bpy.context.scene.frame_set(cur_frame)
+            utils.set_frame_fast(cur_frame)
 
             convergence = (-bones['c_x_eye_target.l'].location.x + bones['c_x_eye_target.r'].location.x) / 6.4 # 6.4 = 3.2 * 2, 3.2 is the most each c_x_eye_target can move
 

@@ -1,5 +1,6 @@
 import math
 import mathutils
+from mathutils import Matrix
 import bpy
 
 
@@ -110,7 +111,7 @@ def keyframe_pb_transforms(pb, loc=True, rot=True, scale=True, keyf_locked=False
     if loc:
         for i, j in enumerate(pb.lock_location):
             if not j or keyf_locked:
-                pb.keyframe_insert(data_path='location', index=i)  
+                pb.keyframe_insert(data_path='location', index=i, group=pb.name)
     if rot:
         rot_dp = 'rotation_quaternion' if pb.rotation_mode == 'QUATERNION' else 'rotation_euler' 
         rot_locks = [i for i in pb.lock_rotation]
@@ -118,12 +119,12 @@ def keyframe_pb_transforms(pb, loc=True, rot=True, scale=True, keyf_locked=False
             rot_locks.insert(0, pb.lock_rotation_w)
         for i, j in enumerate(rot_locks):
             if not j or keyf_locked:
-                pb.keyframe_insert(data_path=rot_dp, index=i)
+                pb.keyframe_insert(data_path=rot_dp, index=i, group=pb.name)
         
     if scale:
         for i, j in enumerate(pb.lock_scale):
             if not j or keyf_locked:
-                pb.keyframe_insert(data_path='scale', index=i)
+                pb.keyframe_insert(data_path='scale', index=i, group=pb.name)
 
 
 # def update_transform():   
@@ -225,7 +226,99 @@ def set_bone_position(bone : bpy.types.PoseBone, pos, world_space = False, key =
         bone.location = pos
 
     if key:
-        bone.keyframe_insert('location')
+        bone.keyframe_insert('location', group=bone.name)
+
+
+def force_clear_transforms_for_selected_bones():
+	# Make sure we're in Pose Mode
+	if bpy.context.object.mode != 'POSE':
+		bpy.ops.object.posemode_toggle()
+	
+	obj = bpy.context.active_object
+	if obj is None or obj.type != 'ARMATURE':
+		print("No active armature object found")
+		return
+	
+	# Function to clear transformations without modifying lock states
+	def clear_transform(bone):
+		bone.location = (0.0, 0.0, 0.0)
+		
+		# Check rotation mode and clear accordingly
+		if bone.rotation_mode == 'QUATERNION':
+			bone.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+		else:
+			bone.rotation_euler = (0.0, 0.0, 0.0)
+		
+		bone.scale = (1.0, 1.0, 1.0)
+
+		bone.keyframe_insert(data_path="location", group=bone.name)
+		bone.keyframe_insert(data_path="rotation_quaternion", group=bone.name)
+		bone.keyframe_insert(data_path="scale", group=bone.name)
+	
+	# Iterate through all selected pose bones
+	for bone in obj.pose.bones:
+		if bone.bone.select:
+			clear_transform(bone)
+
+
+def get_parent_to_rest_matrix(pose_bone):
+	'''	matrix that converts vectors from: given pose_bone's parent to given post_bone's rest'''
+
+	rest_matrix = pose_bone.bone.matrix_local
+	
+	if pose_bone.parent:
+		return rest_matrix.inverted() @ pose_bone.parent.bone.matrix_local
+	else:
+		# Return identity matrix when there is no parent
+		return Matrix.Identity(4)
+	
+def get_final_current_to_rest_matrix(pose_bone, parent_to_rest_matrix=None):
+	'''	final(visual) transform matrix relative to rest.
+		visual means after animation, driver and constraints'''
+	
+	if pose_bone.parent:
+		
+		# If parent_to_rest_matrix is None, use the get_parent_to_rest_matrix function to get it
+		if parent_to_rest_matrix is None:
+			parent_to_rest_matrix = get_parent_to_rest_matrix(pose_bone)
+		
+		parent_pose_matrix = pose_bone.parent.matrix
+		
+		# Calculate the current-to-parent matrix
+		current_to_parent_matrix = parent_pose_matrix.inverted() @ pose_bone.matrix
+		
+		# Calculate the current-to-rest matrix
+		current_to_rest_matrix = parent_to_rest_matrix @ current_to_parent_matrix
+		
+	else:
+		
+		rest_matrix = pose_bone.bone.matrix_local
+		
+		# No parent, so simply invert the rest pose matrix
+		current_to_rest_matrix = rest_matrix.inverted() @ pose_bone.matrix
+
+	return current_to_rest_matrix
+
+
+def get_final_local_location(pose_bone, parent_to_rest_matrix=None):
+	'''	final(visual) local location, "local" is relative to rest
+		visual means after animation, driver and constraints'''
+	
+	current_to_rest_matrix = get_final_current_to_rest_matrix(pose_bone, parent_to_rest_matrix)
+	
+	return current_to_rest_matrix.to_translation()
+
+def set_frame_fast(frame):
+	'''	set frame and only update the depsgraph,
+		which means only updating what's enabled in the scene
+	'''
+
+	# Directly set the scene's frame_current property
+	bpy.context.scene.frame_current = frame
+
+	# Update the necessary parts of the dependency graph
+	depsgraph = bpy.context.evaluated_depsgraph_get()
+	depsgraph.update()
 
 '''
 # LEGACY
