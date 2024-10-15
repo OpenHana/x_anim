@@ -145,6 +145,9 @@ class X_ANIM_OT_eye_ctrl_to_eye_target(Operator):
             left_location = utils.get_world_position_of_pose_bone_tail(bones["x_actual_line_of_sight.l"])
             right_location = utils.get_world_position_of_pose_bone_tail(bones["x_actual_line_of_sight.r"])
 
+            #print("C:")
+            #print(central_location)
+
             utils.set_bone_position(bones["c_x_eye_target.x"], central_location, world_space=True, key=True)
             utils.set_bone_position(bones["c_x_eye_target.l"], left_location, world_space=True, key=True)
             utils.set_bone_position(bones["c_x_eye_target.r"], right_location, world_space=True, key=True)

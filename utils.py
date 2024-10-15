@@ -198,29 +198,20 @@ def set_bone_position(bone : bpy.types.PoseBone, pos, world_space = False, key =
 
         armature : bpy.types.Armature = bone.id_data
 
-        matrix_world = armature.convert_space(pose_bone=bone, 
-            matrix=bone.matrix, 
-            from_space='POSE', 
-            to_space='WORLD')
-        matrix_world.translation = pos
-
         has_child_of_constraint = False
         parent_matrix = None
         # TODO: only consider the condition when it has subtarget and influence == 1 for now.
-        for c in bone.constraints: 
-            if c.type == 'CHILD_OF' and c.target != None and c.influence >= 0.99:
-                has_child_of_constraint = True
-                parent_bone = get_pose_bone(c.target, c.subtarget)
-                parent_matrix = c.inverse_matrix.inverted() @ parent_bone.matrix.inverted()
+        #for c in bone.constraints: 
+        #    if c.type == 'CHILD_OF' and c.target != None and c.influence >= 0.99 and c.enabled:
+        #        has_child_of_constraint = True
+                #parent_bone = get_pose_bone(c.target, c.subtarget)
+                #parent_matrix = c.inverse_matrix.inverted() @ parent_bone.matrix.inverted()
 
-
-        if has_child_of_constraint:
-            bone.matrix = parent_matrix @ matrix_world
-        else:
-            bone.matrix = armature.convert_space(pose_bone=bone, 
-            matrix=matrix_world, 
-            from_space='WORLD', 
-            to_space='POSE')
+        # TODO, not correct when Child Of is present, 
+        # TO THINK, since matrix is the visual transform
+        # and since its modification can really move the bone
+        # so why 
+        bone.matrix.translation = armature.matrix_world.inverted() @ mathutils.Vector(pos)
                
     else:
         bone.location = pos
