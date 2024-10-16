@@ -149,6 +149,11 @@ class X_ANIM_OT_eye_ctrl_to_eye_target(Operator):
             #print(central_location)
 
             utils.set_bone_position(bones["c_x_eye_target.x"], central_location, world_space=True, key=True)
+
+            # after changing the position of c_x_eye_target, we should update the depsgraph
+            # cuz c_x_eye_target.l/r 's position are dependent on that
+            utils.set_frame_fast(cur_frame) #TODO, is there a better way of doing this?
+
             utils.set_bone_position(bones["c_x_eye_target.l"], left_location, world_space=True, key=True)
             utils.set_bone_position(bones["c_x_eye_target.r"], right_location, world_space=True, key=True)
 
