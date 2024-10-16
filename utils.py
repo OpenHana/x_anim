@@ -194,27 +194,38 @@ def set_bone_position(bone : bpy.types.PoseBone, pos, world_space = False, key =
         print("Bone position shouldn't be none!")
         return
 
-    if world_space:
+    if world_space is False:
+
+        bone.location = pos
+
+    else:
 
         armature : bpy.types.Armature = bone.id_data
 
         has_child_of_constraint = False
-        parent_matrix = None
+        constraint_parent_matrix = None
         # TODO: only consider the condition when it has subtarget and influence == 1 for now.
-        #for c in bone.constraints: 
-        #    if c.type == 'CHILD_OF' and c.target != None and c.influence >= 0.99 and c.enabled:
-        #        has_child_of_constraint = True
-                #parent_bone = get_pose_bone(c.target, c.subtarget)
-                #parent_matrix = c.inverse_matrix.inverted() @ parent_bone.matrix.inverted()
+        for c in bone.constraints: 
+            if c.type == 'CHILD_OF' and c.target != None and c.influence >= 0.99 and c.enabled:
+                has_child_of_constraint = True
+                parent_obj = c.target
+                parent_bone = get_pose_bone(parent_obj, c.subtarget)
 
-        # TODO, not correct when Child Of is present, 
-        # TO THINK, since matrix is the visual transform
-        # and since its modification can really move the bone
-        # so why 
-        bone.matrix.translation = armature.matrix_world.inverted() @ mathutils.Vector(pos)
-               
-    else:
-        bone.location = pos
+                constraint_parent_matrix = Matrix.identity
+
+                if parent_obj is not None:
+                    constraint_parent_matrix = parent_obj.matrix_world.inverted() # world to object
+                
+                if parent_bone is not None:
+                    constraint_parent_matrix = parent_bone.matrix.inverted() @ constraint_parent_matrix # object to bone
+
+                constraint_parent_matrix = c.inverse_matrix.inverted() @ constraint_parent_matrix # bone to constraint 
+
+        if has_child_of_constraint:
+            bone.matrix.translation = constraint_parent_matrix @ mathutils.Vector(pos)   
+        else:
+            bone.matrix.translation = armature.matrix_world.inverted() @ mathutils.Vector(pos) # set pos in armature (pose) space
+        
 
     if key:
         bone.keyframe_insert('location', group=bone.name)
