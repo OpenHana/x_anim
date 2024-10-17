@@ -11,8 +11,8 @@ from typing import Callable
 
 def fast_bake_selected_bones_location(start_frame, end_frame, progress: ui_utils.ProgressCallback = None):
 	"""
-    Bake the location keyframes for the selected bones in the active armature.
-    """
+	Bake the location keyframes for the selected bones in the active armature.
+	"""
 
 	obj = bpy.context.active_object
 
@@ -90,6 +90,54 @@ def fast_bake_selected_bones_location(start_frame, end_frame, progress: ui_utils
 	duration = end_time - start_time
 	print(f"Animation baking completed in {duration:.2f} seconds.")
 
+
+def clear_locked_channels_fcurves():
+	# Get the active object
+	armature = bpy.context.object
+	if armature.type != 'ARMATURE':
+		print("Active object is not an armature.")
+		return
+
+	# Get the active action
+	action = armature.animation_data.action if armature.animation_data else None
+	if not action:
+		print("No active action found for the armature.")
+		return
+
+	# Generate a map of selected bones
+	selected_bones = {bone.name: bone for bone in armature.pose.bones if bone.bone.select}
+	if not selected_bones:
+		print("No bones selected.")
+		return
+
+	def is_locked_transform_channel(bone, data_path, array_index):
+		lock_index = array_index % 3
+		
+		if "location" in data_path and bone.lock_location[lock_index]:
+			return True
+		if "rotation_quaternion" in data_path and bone.lock_rotation[lock_index]:
+			return True
+		if "rotation_euler" in data_path and bone.lock_rotation[lock_index]:
+			return True
+		if "scale" in data_path and bone.lock_scale[lock_index]:
+			return True
+		
+		return False
+
+	# Loop through all fcurves in the action
+	for fcurve in action.fcurves[:]:
+		data_path = fcurve.data_path
+		
+		# Extract the bone name from the data path
+		if data_path.startswith("pose.bones"):
+			bone_name = data_path.split('"')[1]
+			
+			# Check if the bone is selected
+			bone = selected_bones.get(bone_name)
+			if bone and is_locked_transform_channel(bone, data_path, fcurve.array_index):
+				action.fcurves.remove(fcurve)
+	
+	print("Finished removing locked transform fcurves.")
 #
 # operators
 #
@@ -159,6 +207,27 @@ class X_ANIM_OT_force_clear_transform(Operator):
 
 		return {'FINISHED'}
 
+##
+## Delete Locked Channel's Animation
+##
+   
+class X_ANIM_OT_clear_locked_channels_anim(Operator):
+	bl_idname = "x_anim.clear_locked_channels_anim"
+	bl_label = "Clear Locked Channels' Anim"
+	bl_description = "Clear animation curves of all channels that are locked"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	@classmethod
+	def poll(cls, context):
+		return True
+
+	def execute(self, context: Context):
+
+		clear_locked_channels_fcurves()
+
+		return {'FINISHED'}
+
+
 #
 # panel
 #
@@ -178,13 +247,29 @@ class x_anim_PT_baking_utils(Panel):
 		ui_utils.default_operator_button(row, X_ANIM_OT_fast_bake_locations)
 		row = layout.row()
 		ui_utils.default_operator_button(row, X_ANIM_OT_force_clear_transform)
+		row = layout.row()
+		ui_utils.default_operator_button(row, X_ANIM_OT_clear_locked_channels_anim)
 
 #
 # register
 #
 
+def draw_additional(self, context):
+	layout = self.layout
+	layout.separator()
+	layout.label(text = "xanim")
+	layout.operator("x_anim.clear_locked_channels_anim")
+
+
+
 def register():
 	bpy.types.Scene.x_fast_bake_locations_properties = bpy.props.PointerProperty(type=x_fast_bake_locations_properties)
+	bpy.types.GRAPH_MT_channel.append(draw_additional)
+	bpy.types.GRAPH_MT_context_menu.append(draw_additional)
+	bpy.types.DOPESHEET_MT_channel_context_menu.append(draw_additional)
 
 def unregister():
 	del bpy.types.Scene.x_fast_bake_locations_properties
+	bpy.types.GRAPH_MT_channel.remove(draw_additional)
+	bpy.types.GRAPH_MT_context_menu.append(draw_additional)
+	bpy.types.DOPESHEET_MT_channel_context_menu.append(draw_additional)
