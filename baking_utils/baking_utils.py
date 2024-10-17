@@ -254,22 +254,28 @@ class x_anim_PT_baking_utils(Panel):
 # register
 #
 
-def draw_additional(self, context):
+class XANIM_MT_submenu(bpy.types.Menu):
+	bl_label = "xanim"
+	bl_idname = "XANIM_MT_submenu"  # Add bl_idname
+
+	def draw(self, context):
+		layout = self.layout
+		layout.operator("x_anim.clear_locked_channels_anim")
+
+def draw_in_context_menu(self, context):
 	layout = self.layout
+	layout.label(text="xanim")
+	layout.menu(XANIM_MT_submenu.bl_idname)
 	layout.separator()
-	layout.label(text = "xanim")
-	layout.operator("x_anim.clear_locked_channels_anim")
-
-
-
+	
 def register():
 	bpy.types.Scene.x_fast_bake_locations_properties = bpy.props.PointerProperty(type=x_fast_bake_locations_properties)
-	bpy.types.GRAPH_MT_channel.append(draw_additional)
-	bpy.types.GRAPH_MT_context_menu.append(draw_additional)
-	bpy.types.DOPESHEET_MT_channel_context_menu.append(draw_additional)
+	bpy.types.GRAPH_MT_channel.prepend(draw_in_context_menu)
+	bpy.types.GRAPH_MT_context_menu.prepend(draw_in_context_menu)
+	bpy.types.DOPESHEET_MT_channel_context_menu.prepend(draw_in_context_menu)
 
 def unregister():
 	del bpy.types.Scene.x_fast_bake_locations_properties
-	bpy.types.GRAPH_MT_channel.remove(draw_additional)
-	bpy.types.GRAPH_MT_context_menu.append(draw_additional)
-	bpy.types.DOPESHEET_MT_channel_context_menu.append(draw_additional)
+	bpy.types.GRAPH_MT_channel.remove(draw_in_context_menu)
+	bpy.types.GRAPH_MT_context_menu.remove(draw_in_context_menu)
+	bpy.types.DOPESHEET_MT_channel_context_menu.remove(draw_in_context_menu)
