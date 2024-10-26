@@ -88,9 +88,9 @@ def bake_switch_child_of(self):
 
         #prepass
         # frame_start & frame_start - 1
-        bpy.context.scene.frame_set(self.frame_start)
+        set_frame_fast(self.frame_start)
         keyframe_selected_pose_bones()
-        bpy.context.scene.frame_set(self.frame_start - 1)
+        set_frame_fast(self.frame_start - 1)
         keyframe_selected_pose_bones()
 
         # frames in between
@@ -105,15 +105,15 @@ def bake_switch_child_of(self):
 
 
         # frame_end & frame_end + 1
-        bpy.context.scene.frame_set(self.frame_end)
+        set_frame_fast(self.frame_end)
         keyframe_selected_pose_bones()
-        bpy.context.scene.frame_set(self.frame_end + 1)
+        set_frame_fast(self.frame_end + 1)
         keyframe_selected_pose_bones()
 
 
 
         #switch pass
-        bpy.context.scene.frame_set(self.frame_start - 1)
+        set_frame_fast(self.frame_start - 1)
         prev_frame = self.frame_start - 1
         while bpy.context.scene.frame_current < self.frame_end:
             bpy.ops.screen.keyframe_jump(next=True)
@@ -128,12 +128,12 @@ def bake_switch_child_of(self):
     else:
         #prepass
         for i in range(self.frame_start - 1, self.frame_end + 2):
-            bpy.context.scene.frame_set(i)
+            set_frame_fast(i)
 
             keyframe_selected_pose_bones()
 
         #switch pass
         for i in range(self.frame_start, self.frame_end + 1):
-            bpy.context.scene.frame_set(i)
+            set_frame_fast(i)
 
             switch_child_of(self)
