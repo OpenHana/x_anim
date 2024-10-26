@@ -313,7 +313,7 @@ class x_anim_PT_eye_utils(Panel):
 
         row = layout.row()
 
-        row.label("Faster if only face rig enabled")
+        row.label(text="Faster if only the face rig enabled in scene")
 
         row = layout.row()
         ui_utils.default_operator_button(row, X_ANIM_OT_center_eye_lookat)
