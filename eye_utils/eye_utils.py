@@ -109,10 +109,10 @@ class X_ANIM_OT_center_eye_lookat(Operator):
 ## eye_ctrl to eye_target
 ##
    
-class X_ANIM_OT_eye_ctrl_to_eye_target(Operator):
-    bl_idname = "x_anim.eye_ctrl_to_eye_target"
-    bl_label = "Eye Ctrl → Eye Target"
-    bl_description = "snap eye_target to the result of eye_ctrl"
+class X_ANIM_OT_final_line_of_sight_to_eye_target(Operator):
+    bl_idname = "x_anim.final_line_of_sight_to_eye_target"
+    bl_label = "Final Line Of Sight → Eye Target"
+    bl_description = "snap eye_target to the Final Line Of Sight"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -130,30 +130,27 @@ class X_ANIM_OT_eye_ctrl_to_eye_target(Operator):
 
         ui_utils.progress_begin()
 
-        # bake the curve to ensure that the evaluated values of subsequent frames 
-        # are not affected by inserting new frames
-        # add 1 keyframe before start and after end to protect the curve outside the given frame range
-        bones_bake(["c_x_eye_target.x", "c_x_eye_target.l", "c_x_eye_target.r"], start_frame - 1, end_frame + 1, ui_utils.progress_update)
-
+        # First loop: Collect locations
+        frame_data = []
         for i in range(total_frames):
-
             cur_frame = i + start_frame
-            #bpy.context.scene.frame_set(cur_frame)
             utils.set_frame_fast(cur_frame)
 
-            central_location = utils.get_world_position_of_pose_bone(bones["x_actual_eye_target"])
-            left_location = utils.get_world_position_of_pose_bone_tail(bones["x_actual_line_of_sight.l"])
-            right_location = utils.get_world_position_of_pose_bone_tail(bones["x_actual_line_of_sight.r"])
+            left_location = utils.get_world_position_of_pose_bone_tail(bones["x_final_line_of_sight.l"])
+            right_location = utils.get_world_position_of_pose_bone_tail(bones["x_final_line_of_sight.r"])
 
-            #print("C:")
-            #print(central_location)
+            central_location = (left_location + right_location) * 0.5
+            # Store data as a tuple
+            frame_data.append((cur_frame, left_location, right_location, central_location))
+
+            ui_utils.progress_update(i, total_frames)
+
+        # Second loop: Set locations based on collected data
+        for i, (cur_frame, left_location, right_location, central_location) in enumerate(frame_data):
+            
+            utils.set_frame_fast(cur_frame)
 
             utils.set_bone_position(bones["c_x_eye_target.x"], central_location, world_space=True, key=True)
-
-            # after changing the position of c_x_eye_target, we should update the depsgraph
-            # cuz c_x_eye_target.l/r 's position are dependent on that
-            utils.set_frame_fast(cur_frame) #TODO, is there a better way of doing this?
-
             utils.set_bone_position(bones["c_x_eye_target.l"], left_location, world_space=True, key=True)
             utils.set_bone_position(bones["c_x_eye_target.r"], right_location, world_space=True, key=True)
 
@@ -315,9 +312,13 @@ class x_anim_PT_eye_utils(Panel):
         props = bpy.context.scene.x_anim
 
         row = layout.row()
+
+        row.label("Faster if only face rig enabled")
+
+        row = layout.row()
         ui_utils.default_operator_button(row, X_ANIM_OT_center_eye_lookat)
         row = layout.row()
-        ui_utils.default_operator_button(row, X_ANIM_OT_eye_ctrl_to_eye_target)
+        ui_utils.default_operator_button(row, X_ANIM_OT_final_line_of_sight_to_eye_target)
         row = layout.row()
         ui_utils.default_operator_button(row, X_ANIM_OT_eye_distance_to_convergence)
         row = layout.row()

@@ -1,7 +1,8 @@
 import math
 import mathutils
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 import bpy
+from bpy.types import PoseBone
 
 
 
@@ -137,24 +138,24 @@ def get_world_location(obj):
     return obj.matrix_world.to_translation()
 
 
-def get_world_position_of_pose_bone(pose_bone : bpy.types.PoseBone):
+def get_world_position_of_pose_bone(pose_bone : PoseBone) -> Vector:
     return (pose_bone.id_data.matrix_world @ pose_bone.matrix).to_translation()
 
-def get_world_position_of_pose_bone_tail(pose_bone : bpy.types.PoseBone):
+def get_world_position_of_pose_bone_tail(pose_bone : PoseBone) -> Vector:
     return pose_bone.id_data.matrix_world @ pose_bone.tail
 
 
 
-def convert_to_local_direction(obj, bone, global_direction):
+def convert_to_local_direction(obj, bone, global_direction) -> Vector:
     matrix_world = obj.convert_space(pose_bone=bone, 
-        matrix=mathutils.Matrix.Identity(4), 
+        matrix = Matrix.Identity(4), 
         from_space='WORLD', 
         to_space='LOCAL')
-    return matrix_world @ mathutils.Vector([global_direction[0], global_direction[1], global_direction[2], 0])
+    return matrix_world @ Vector([global_direction[0], global_direction[1], global_direction[2], 0])
 
 
-def convert_to_local_location(obj, bone, global_location):
-    matrix = mathutils.Matrix.Translation(mathutils.Vector(global_location))
+def convert_to_local_location(obj, bone, global_location) -> Vector:
+    matrix = Matrix.Translation(Vector(global_location))
     matrix_local = obj.convert_space(pose_bone=bone, 
         matrix=matrix, 
         from_space='WORLD', 
