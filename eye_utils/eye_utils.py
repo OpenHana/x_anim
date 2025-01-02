@@ -64,12 +64,12 @@ class X_ANIM_OT_center_eye_lookat(Operator):
 
         bones = bpy.context.view_layer.objects.active.pose.bones
 
-        ui_utils.progress_begin()
+        ui_utils.default_progress_begin()
 
         # bake the curve to ensure that the evaluated values of subsequent frames 
         # are not affected by inserting new frames
         # add 1 keyframe before start and after end to protect the curve outside the given frame range
-        eye_ctrls_bake(start_frame - 1, end_frame + 1, ui_utils.progress_update)
+        eye_ctrls_bake(start_frame - 1, end_frame + 1, ui_utils.default_progress_update)
 
         for i in range(total_frames):
 
@@ -85,9 +85,9 @@ class X_ANIM_OT_center_eye_lookat(Operator):
 
             eye_ctrls_insert_keyframe(cur_frame)
 
-            ui_utils.progress_update(i, total_frames)
+            ui_utils.default_progress_update(i, total_frames)
 
-        ui_utils.progress_end()
+        ui_utils.default_progress_end()
 
         return {'FINISHED'}
     
@@ -128,7 +128,7 @@ class X_ANIM_OT_final_line_of_sight_to_eye_target(Operator):
 
         bones = bpy.context.view_layer.objects.active.pose.bones
 
-        ui_utils.progress_begin()
+        ui_utils.default_progress_begin()
 
         # First loop: Collect locations
         frame_data = []
@@ -143,7 +143,7 @@ class X_ANIM_OT_final_line_of_sight_to_eye_target(Operator):
             # Store data as a tuple
             frame_data.append((cur_frame, left_location, right_location, central_location))
 
-            ui_utils.progress_update(i, total_frames)
+            ui_utils.default_progress_update(i, total_frames)
 
         # Second loop: Set locations based on collected data
         for i, (cur_frame, left_location, right_location, central_location) in enumerate(frame_data):
@@ -154,9 +154,9 @@ class X_ANIM_OT_final_line_of_sight_to_eye_target(Operator):
             utils.set_bone_position(bones["c_x_eye_target.l"], left_location, world_space=True, key=True)
             utils.set_bone_position(bones["c_x_eye_target.r"], right_location, world_space=True, key=True)
 
-            ui_utils.progress_update(i, total_frames)
+            ui_utils.default_progress_update(i, total_frames)
 
-        ui_utils.progress_end()
+        ui_utils.default_progress_end()
 
         return {'FINISHED'}
     
@@ -196,12 +196,12 @@ class X_ANIM_OT_eye_distance_to_convergence(Operator):
 
         bones = bpy.context.view_layer.objects.active.pose.bones
 
-        ui_utils.progress_begin()
+        ui_utils.default_progress_begin()
 
         # bake the curve to ensure that the evaluated values of subsequent frames 
         # are not affected by inserting new frames
         # add 1 keyframe before start and after end to protect the curve outside the given frame range
-        bones_bake(['c_eye.L', 'c_eye.R', 'c_eye_convergence_slider'], start_frame - 1, end_frame + 1, ui_utils.progress_update)
+        bones_bake(['c_eye.L', 'c_eye.R', 'c_eye_convergence_slider'], start_frame - 1, end_frame + 1, ui_utils.default_progress_update)
 
         for i in range(total_frames):
 
@@ -217,9 +217,9 @@ class X_ANIM_OT_eye_distance_to_convergence(Operator):
 
             bones_insert_keyframe(['c_eye.L', 'c_eye.R', 'c_eye_convergence_slider'], cur_frame)
 
-            ui_utils.progress_update(i, total_frames)
+            ui_utils.default_progress_update(i, total_frames)
 
-        ui_utils.progress_end()
+        ui_utils.default_progress_end()
 
         return {'FINISHED'}
     
@@ -255,12 +255,12 @@ class X_ANIM_OT_eye_target_distance_to_convergence(Operator):
 
         bones = bpy.context.view_layer.objects.active.pose.bones
 
-        ui_utils.progress_begin()
+        ui_utils.default_progress_begin()
 
         # bake the curve to ensure that the evaluated values of subsequent frames 
         # are not affected by inserting new frames
         # add 1 keyframe before start and after end to protect the curve outside the given frame range
-        bones_bake(['c_x_eye_target.l', 'c_x_eye_target.r', 'c_eye_target_convergence_slider'], start_frame - 1, end_frame + 1, ui_utils.progress_update)
+        bones_bake(['c_x_eye_target.l', 'c_x_eye_target.r', 'c_eye_target_convergence_slider'], start_frame - 1, end_frame + 1, ui_utils.default_progress_update)
 
         for i in range(total_frames):
 
@@ -276,9 +276,9 @@ class X_ANIM_OT_eye_target_distance_to_convergence(Operator):
 
             bones_insert_keyframe(['c_x_eye_target.l', 'c_x_eye_target.r', 'c_eye_target_convergence_slider'], cur_frame)
 
-            ui_utils.progress_update(i, total_frames)
+            ui_utils.default_progress_update(i, total_frames)
 
-        ui_utils.progress_end()
+        ui_utils.default_progress_end()
 
         return {'FINISHED'}
     

@@ -16,11 +16,11 @@ The second parameter is the total number of tasks.
 pass in progress_update when you see param of this type
 '''
 
-def progress_begin():
+def default_progress_begin():
     bpy.context.window_manager.progress_begin(0, 100)
 
-def progress_update(i:int, total:int):
+def default_progress_update(i:int, total:int):
     bpy.context.window_manager.progress_update(float(i) / float(total) * 100)
 
-def progress_end():
+def default_progress_end():
     bpy.context.window_manager.progress_end()

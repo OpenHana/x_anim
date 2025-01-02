@@ -165,11 +165,11 @@ class X_ANIM_OT_fast_bake_locations(Operator):
 		start_frame = props.start_frame
 		end_frame = props.end_frame
 
-		ui_utils.progress_begin()
+		ui_utils.default_progress_begin()
 
-		fast_bake_selected_bones_location(start_frame, end_frame, ui_utils.progress_update)
+		fast_bake_selected_bones_location(start_frame, end_frame, ui_utils.default_progress_update)
 
-		ui_utils.progress_end()
+		ui_utils.default_progress_end()
 
 		return {'FINISHED'}
 	
