@@ -6,6 +6,34 @@ from bpy.types import Operator
 #   Helper    
 # -------------------------------------------------------------------
 
+def reset_shapekey_to_empty(obj, shapekey_name):
+    """将指定对象的指定形状键重置为空形状键."""
+    if obj.data.shape_keys:
+        basis_key = obj.data.shape_keys.reference_key if obj.data.shape_keys.reference_key else obj.data.shape_keys.key_blocks['Basis']
+        shapekey = obj.data.shape_keys.key_blocks.get(shapekey_name)
+        
+        if shapekey and basis_key:
+            basis_data = basis_key.data
+            shapekey_data = shapekey.data
+            for i in range(len(shapekey_data)):
+                shapekey_data[i].co = basis_data[i].co
+            print(f"Reset shapekey '{shapekey_name}' to empty")
+        else:
+            print(f"No shapekey named '{shapekey_name}' found or no basis shapekey found")
+    else:
+        print("Object does not have shape keys")
+
+def reset_selected_shapekey_to_empty():
+    """将活动对象的活动形状键重置为空形状键."""
+
+    active_obj = bpy.context.view_layer.objects.active
+
+    if active_obj and active_obj.active_shape_key:
+        shapekey_name = active_obj.active_shape_key.name
+        reset_shapekey_to_empty(active_obj, shapekey_name)
+    else:
+        print("Active object or active shape key not found")
+
 # -------------------------------------------------------------------
 #   Operators    
 # -------------------------------------------------------------------
@@ -149,6 +177,7 @@ class XShapeKeyMirrorLeftRightOp(Operator):
     bl_idname = "xutil_shapekey_tools.mirror_left_right"
     bl_label = "Mirror Left/Right"
     bl_description = "Mirror the current shape key to the other side"
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):       
         
@@ -160,6 +189,7 @@ class XShapeKeyMirrorLeftRightTopoOp(Operator):
     bl_idname = "xutil_shapekey_tools.mirror_left_right_topo"
     bl_label = "Mirror Left/Right (Topology)"
     bl_description = "Mirror the current shape key to the other side"
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):       
         
@@ -184,6 +214,7 @@ class XAllShapeKeysToZeroOp(Operator):
     bl_idname = "xutil_shapekey_tools.all_to_zero"
     bl_label = "all 0"
     bl_description = "set all weight to 0"
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):       
         for shapekey in context.object.data.shape_keys.key_blocks:
@@ -195,11 +226,23 @@ class XAllShapeKeysToOneOp(Operator):
     bl_idname = "xutil_shapekey_tools.all_to_one"
     bl_label = "all 1"
     bl_description = "set all weight to 1"
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):       
         for shapekey in context.object.data.shape_keys.key_blocks:
             shapekey.value = 1
 
+        return {'FINISHED'}
+
+class XResetSelectedShapeKeyToEmptyOp(Operator):
+    bl_idname = "xutil_shapekey_tools.reset_selected_to_empty"
+    bl_label = "Reset Selected to Empty"
+    bl_description = "Reset the selected shape key to empty"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        reset_selected_shapekey_to_empty()
+        self.report({'INFO'}, "Selected shape key reset to empty")
         return {'FINISHED'}
 
 
@@ -223,6 +266,9 @@ def draw_ui(self, context):
 
     row = layout.row(align=True)
     row.operator(XCopySelectedShapeKeyOp.bl_idname)
+
+    row = layout.row(align=True)
+    row.operator(XResetSelectedShapeKeyToEmptyOp.bl_idname)
 
     row = layout.row(align=True)
     row.operator(XEnableAllShapeKeysOp.bl_idname, icon="RESTRICT_VIEW_OFF")
