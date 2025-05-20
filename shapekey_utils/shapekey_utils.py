@@ -155,10 +155,12 @@ def mirror_sk(topo_mirror : bool) -> bool:
 
     other_sk = shape_keys.get(other_sk_name)
     if other_sk:
-        obj.shape_key_remove(other_sk)
-    other_sk = obj.shape_key_add(name=other_sk_name, from_mix=False)
-
-    obj.active_shape_key_index = len(shape_keys) - 1
+        # Set the existing shape key as active
+        obj.active_shape_key_index = shape_keys.keys().index(other_sk_name)
+    else:
+        # Create the shape key if it doesn't exist and set as active
+        other_sk = obj.shape_key_add(name=other_sk_name, from_mix=False)
+        obj.active_shape_key_index = len(shape_keys) - 1
 
     # 3. make other side shape key == this shape key
 
