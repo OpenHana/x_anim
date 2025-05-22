@@ -137,9 +137,13 @@ def mirror_sk_name(shape_key_name: str) -> str:
 
 def mirror_sk(topo_mirror : bool) -> bool:
 
+    obj = bpy.context.active_object
+
+    # Save the current mode
+    prev_mode = obj.mode
+
     # 0. get current shape key info
 
-    obj = bpy.context.active_object
     this_sk = obj.active_shape_key
     this_obj_data : bpy.types.Mesh = obj.data
     shape_keys = this_obj_data.shape_keys.key_blocks
@@ -172,6 +176,10 @@ def mirror_sk(topo_mirror : bool) -> bool:
     # 4. call mirror
 
     bpy.ops.object.shape_key_mirror(use_topology=topo_mirror)
+
+    # Restore the previous mode if needed
+    if obj.mode != prev_mode:
+        bpy.ops.object.mode_set(mode=prev_mode)
 
     return True
 
