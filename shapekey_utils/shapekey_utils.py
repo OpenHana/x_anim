@@ -1,6 +1,7 @@
 import bpy
 
 from bpy.types import Operator
+import re
 
 # -------------------------------------------------------------------
 #   Helper    
@@ -105,34 +106,33 @@ class XDisableAllShapeKeysOp(Operator):
         self.report({'INFO'}, "All Shape Keys disabled")        
         return {'FINISHED'}
 
-def mirror_sk_name(shape_key_name : str) -> str:
-    # left
-    if shape_key_name.endswith(".l") or shape_key_name.endswith("_l"):
-        return shape_key_name[0: len(shape_key_name) - 1] + "r"
-    
-    if shape_key_name.endswith(".L") or shape_key_name.endswith("_L"):
-        return shape_key_name[0: len(shape_key_name) - 1] + "R"
-    
-    if shape_key_name.endswith("left"):
-        return shape_key_name[0: len(shape_key_name) - 4] + "right"
+def mirror_sk_name(shape_key_name: str) -> str:
+    """
+    Returns the mirrored shape key name by swapping left/right indicators.
+    Handles indicators at any position, delimited by common separators.
+    """
+    # Patterns for left/right indicators and their replacements
+    # Avoid variable-width look-behind by matching explicit patterns
+    patterns = [
+        # Lowercase single-letter with delimiters
+        (r'([._-])l([._-]|$)', r'\1r\2'),      # "eye.l" -> "eye.r"
+        (r'([._-])r([._-]|$)', r'\1l\2'),      # "eye.r" -> "eye.l"
+        # Lowercase full word, no delimiter needed
+        (r'left', 'right'),                    # "eyeleft" -> "eyeright", "eye-left" -> "eye-right"
+        (r'right', 'left'),                    # "eyeright" -> "eyeleft", "eye-right" -> "eye-left"
+        # Uppercase single-letter with delimiters
+        (r'([._-])L([._-]|$)', r'\1R\2'),      # "eye.L" -> "eye.R"
+        (r'([._-])R([._-]|$)', r'\1L\2'),      # "eye.R" -> "eye.L"
+        # Uppercase full word, no delimiter needed
+        (r'Left', 'Right'),                    # "eyeLeft" -> "eyeRight", "eye-Left" -> "eye-Right"
+        (r'Right', 'Left'),                    # "eyeRight" -> "eyeLeft", "eye-Right" -> "eye-Left"
+    ]
 
-    if shape_key_name.endswith("Left"):
-        return shape_key_name[0: len(shape_key_name) - 4] + "Right"
-    
-    # right
-    if shape_key_name.endswith(".r") or shape_key_name.endswith("_r"):
-        return shape_key_name[0: len(shape_key_name) - 1] + "l"
-    
-    if shape_key_name.endswith(".R") or shape_key_name.endswith("_R"):
-        return shape_key_name[0: len(shape_key_name) - 1] + "L"
-    
-    if shape_key_name.endswith("right"):
-        return shape_key_name[0: len(shape_key_name) - 5] + "left"
-    
-    if shape_key_name.endswith("Right"):
-        return shape_key_name[0: len(shape_key_name) - 5] + "Left"
-    
-    #other
+    for pattern, replacement in patterns:
+        if re.search(pattern, shape_key_name):
+            return re.sub(pattern, replacement, shape_key_name, count=1)
+
+    # If no match, append _Mirror
     return shape_key_name + "_Mirror"
 
 def mirror_sk(topo_mirror : bool) -> bool:

@@ -1,11 +1,46 @@
 import bpy
 from ..ui_utils import *
 from bpy.types import Operator
+import re
 
 
 # -------------------------------------------------------------------
 #   Helper    
 # -------------------------------------------------------------------
+
+def is_sided_vertex_group(vertex_group_name: str) -> bool:
+    """Check if the vertex group name indicates a sided vertex group."""
+    pattern = re.compile(r'(\.l\d*$|\.r\d*$|\.L\d*$|\.R\d*$|\.l\.|\.r\.|\.L\.|\.R\.)')
+    return bool(pattern.search(vertex_group_name))
+
+def is_left_sided_vertex_group(vertex_group_name: str) -> bool:
+    """Check if the vertex group name indicates a left-sided vertex group."""
+    pattern = re.compile(r'(\.l\d*$|\.L\d*$|\.l\.|\.L\.)')
+    return bool(pattern.search(vertex_group_name))
+
+def is_right_sided_vertex_group(vertex_group_name: str) -> bool:
+    """Check if the vertex group name indicates a right-sided vertex group."""
+    pattern = re.compile(r'(\.r\d*$|\.R\d*$|\.r\.|\.R\.)')
+    return bool(pattern.search(vertex_group_name))
+
+def mirror_vertex_group_name(vertex_group_name: str) -> str:
+    """Mirror the vertex group name to its opposite side."""
+    # Patterns and replacements for left/right
+    patterns = [
+        (r'\.l(\d*)$', r'.r\1'),
+        (r'\.r(\d*)$', r'.l\1'),
+        (r'\.L(\d*)$', r'.R\1'),
+        (r'\.R(\d*)$', r'.L\1'),
+        (r'\.l\.', '.r.'),
+        (r'\.r\.', '.l.'),
+        (r'\.L\.', '.R.'),
+        (r'\.R\.', '.L.'),
+    ]
+    for pat, repl in patterns:
+        if re.search(pat, vertex_group_name):
+            return re.sub(pat, repl, vertex_group_name)
+    return vertex_group_name + "_mirrored"
+
 def mirror_vertex_group(obj, vertex_group_name : str, use_topology_mirror: bool):
 
     # Set active vertex group to vertex_group_name
@@ -18,20 +53,7 @@ def mirror_vertex_group(obj, vertex_group_name : str, use_topology_mirror: bool)
     obj.vertex_groups.active_index = vertex_group_index
 
     # gen mirrored vg name
-    mirrored_vg_name = vertex_group_name + "_mirrored"
-
-    if vertex_group_name.endswith(".l"):
-        mirrored_vg_name = vertex_group_name[0: len(vertex_group_name) - 1] + 'r'
-    elif vertex_group_name.endswith(".r"):
-        mirrored_vg_name = vertex_group_name[0: len(vertex_group_name) - 1] + 'l'
-    elif vertex_group_name.endswith("_mirrored"):
-        mirrored_vg_name = vertex_group_name[0: len(vertex_group_name) - len("_mirrored")]
-
-    # special cases used internally by xuxing
-    if vertex_group_name.endswith(".l1"): 
-        mirrored_vg_name = vertex_group_name[0: len(vertex_group_name) - 2] + 'r1'
-    elif vertex_group_name.endswith(".r1"):
-        mirrored_vg_name = vertex_group_name[0: len(vertex_group_name) - 2] + 'l1'
+    mirrored_vg_name = mirror_vertex_group_name(vertex_group_name)
 
     # remove mirrored vg if present
     mirrored_vg_index = obj.vertex_groups.find(mirrored_vg_name)
@@ -58,10 +80,10 @@ def mirror_all_vertex_groups(use_topology_mirror: bool, left_to_right: bool, pro
     total_vgs = len(vg_names)
     for i, vg_name in enumerate(vg_names):
         if left_to_right:
-            if vg_name.endswith(".l") or vg_name.endswith(".l1"):
+            if is_left_sided_vertex_group(vg_name):
                 mirror_vertex_group(obj, vg_name, use_topology_mirror)
         else:
-            if vg_name.endswith(".r") or vg_name.endswith(".r1"):
+            if is_right_sided_vertex_group(vg_name):
                 mirror_vertex_group(obj, vg_name, use_topology_mirror)
 
         if progess_callback:
