@@ -139,8 +139,9 @@ def mirror_sk(topo_mirror : bool) -> bool:
 
     obj = bpy.context.active_object
 
-    # Save the current mode
+    # Save the current mode and active shape key index
     prev_mode = obj.mode
+    prev_active_sk_index = obj.active_shape_key_index
 
     # 0. get current shape key info
 
@@ -180,6 +181,9 @@ def mirror_sk(topo_mirror : bool) -> bool:
     # Restore the previous mode if needed
     if obj.mode != prev_mode:
         bpy.ops.object.mode_set(mode=prev_mode)
+
+    # Restore the original active shape key
+    obj.active_shape_key_index = prev_active_sk_index
 
     return True
 
