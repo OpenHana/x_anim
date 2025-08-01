@@ -264,7 +264,7 @@ def set_all_weight(weight : float):
 
 class XAllShapeKeysToZeroOp(Operator):
     bl_idname = "xutil_shapekey_tools.all_to_zero"
-    bl_label = "all 0"
+    bl_label = "All to 0"
     bl_description = "set all weight to 0"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -276,7 +276,7 @@ class XAllShapeKeysToZeroOp(Operator):
 
 class XAllShapeKeysToOneOp(Operator):
     bl_idname = "xutil_shapekey_tools.all_to_one"
-    bl_label = "all 1"
+    bl_label = "All to 1"
     bl_description = "set all weight to 1"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -358,12 +358,12 @@ class XShapeKeySplitLeftRightOp(Operator):
         t_range = self.range
         for idx, v in enumerate(mesh.vertices):
             x = v.co.x
-            if x < -t_range:
+            if x > t_range:
                 left_weight = 1.0
-            elif x > t_range:
+            elif x < -t_range:
                 left_weight = 0.0
             else:
-                t = (t_range - x) / (2 * t_range)
+                t = (x + t_range) / (2 * t_range)
                 t = max(0.0, min(1.0, t))
                 if self.method == 'LINEAR':
                     left_weight = t
@@ -408,8 +408,8 @@ def draw_ui(self, context):
 
     row = layout.row(align=True)
     row.operator(XDisableAllShapeKeysOp.bl_idname, icon="RESTRICT_VIEW_ON")
-    row.operator(XAllShapeKeysToZeroOp.bl_idname)
     row.operator(XEnableAllShapeKeysOp.bl_idname, icon="RESTRICT_VIEW_OFF")
+    row.operator(XAllShapeKeysToZeroOp.bl_idname)
     row.operator(XAllShapeKeysToOneOp.bl_idname)
 
 # -------------------------------------------------------------------
