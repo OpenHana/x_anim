@@ -165,8 +165,15 @@ class XSortVertexGroupsAlphabeticallyOp(Operator):
 
 
 # -------------------------------------------------------------------
-#   Mask <-> Active Vertex Group Operators
+#   Mask <-> Active Vertex Group Operators (safe with zero weights)
 # -------------------------------------------------------------------
+
+def get_sculpt_mask_layer(obj):
+    """Return the sculpt mask attribute if it exists, else None."""
+    if ".sculpt_mask" in obj.data.attributes:
+        return obj.data.attributes[".sculpt_mask"].data
+    return None
+
 
 class XSaveMaskToActiveVertexGroupOp(Operator):
     bl_idname = "object.x_save_mask_to_active_vg"
@@ -184,10 +191,19 @@ class XSaveMaskToActiveVertexGroupOp(Operator):
             self.report({'WARNING'}, "No active vertex group")
             return {'CANCELLED'}
 
-        for i, v in enumerate(obj.data.vertices):
-            if hasattr(v, "mask"):
-                w = 1.0 - v.mask  # Sculpt Mask: 1=hidden, VG: 1=selected
-                vg.add([i], w, 'REPLACE')
+        mask_layer = get_sculpt_mask_layer(obj)
+        if not mask_layer:
+            self.report({'WARNING'}, "No sculpt mask data found")
+            return {'CANCELLED'}
+
+        # 先清空整个 VG（避免缺失顶点）
+        all_indices = [v.index for v in obj.data.vertices]
+        vg.remove(all_indices)
+
+        # 保存 Mask → VG
+        for i, m in enumerate(mask_layer):
+            w = 1.0 - m.value   # sculpt mask: 1=隐藏，VG: 1=选中
+            vg.add([i], w, 'REPLACE')
 
         self.report({'INFO'}, f"Saved mask to active vertex group '{vg.name}'")
         return {'FINISHED'}
@@ -209,20 +225,27 @@ class XLoadMaskFromActiveVertexGroupOp(Operator):
             self.report({'WARNING'}, "No active vertex group")
             return {'CANCELLED'}
 
-        # clear mask first
-        for v in obj.data.vertices:
-            v.mask = 0.0
+        mask_layer = get_sculpt_mask_layer(obj)
+        if not mask_layer:
+            self.report({'WARNING'}, "No sculpt mask data found")
+            return {'CANCELLED'}
 
-        # assign from vg weights
-        for i, v in enumerate(obj.data.vertices):
+        # 清空 Mask
+        for m in mask_layer:
+            m.value = 0.0
+
+        # 从 VG 恢复 → Mask
+        for i, m in enumerate(mask_layer):
             try:
                 w = vg.weight(i)
-                v.mask = 1.0 - w
             except RuntimeError:
-                pass
+                w = 0.0
+            m.value = 1.0 - w
 
         self.report({'INFO'}, f"Loaded mask from active vertex group '{vg.name}'")
         return {'FINISHED'}
+
+
 
 
 # -------------------------------------------------------------------
@@ -270,8 +293,8 @@ def draw_ui(self, context):
     layout.separator()
 
     row = layout.row(align=True)
-    row.operator(XSaveMaskToActiveVertexGroupOp.bl_idname, text="Save Mask → Active VG", icon="GROUP_VERTEX")
-    row.operator(XLoadMaskFromActiveVertexGroupOp.bl_idname, text="Load Mask ← Active VG", icon="GROUP_VERTEX")
+    row.operator(XSaveMaskToActiveVertexGroupOp.bl_idname, text="Mask → Active VG", icon="GROUP_VERTEX")
+    row.operator(XLoadMaskFromActiveVertexGroupOp.bl_idname, text="Mask ← Active VG", icon="GROUP_VERTEX")
 
 
 # -------------------------------------------------------------------
