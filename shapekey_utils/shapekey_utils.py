@@ -1,7 +1,12 @@
 import bpy
 
 from bpy.types import Operator
+from bpy.props import FloatProperty, EnumProperty
+
 import re
+import math
+
+
 
 # -------------------------------------------------------------------
 #   Helper    
@@ -35,13 +40,17 @@ def reset_active_shapekey_to_empty():
     else:
         print("Active object or active shape key not found")
 
+def ease(x):
+    # S 曲线 (smoothstep)，0~1 输入输出，首尾斜率为0
+    return 3*x**2 - 2*x**3
+
 # -------------------------------------------------------------------
 #   Operators    
 # -------------------------------------------------------------------
 
 class XCopySelectedShapeKeyOp(Operator):
     bl_idname = "xutil_shapekey_tools.copy_selected"
-    bl_label = "Copy Selected"
+    bl_label = "Copy"
     bl_description = "new name = name + _Copy"
 
     def execute(self, context):       
@@ -113,7 +122,7 @@ def copy_sk() -> bool:
 
 class XEnableAllShapeKeysOp(Operator):
     bl_idname = "xutil_shapekey_tools.enable_all"
-    bl_label = "Enable All"
+    bl_label = "All Enable"
     bl_description = "Enable all Shape Keys"
 
     def execute(self, context):       
@@ -125,7 +134,7 @@ class XEnableAllShapeKeysOp(Operator):
 
 class XDisableAllShapeKeysOp(Operator):
     bl_idname = "xutil_shapekey_tools.disable_all"
-    bl_label = "Disable All"
+    bl_label = "All Disable"
     bl_description = "Disable all Shape Keys"
 
     def execute(self, context):       
@@ -218,7 +227,7 @@ def mirror_sk(topo_mirror : bool) -> bool:
 
 class XShapeKeyMirrorLeftRightOp(Operator):
     bl_idname = "xutil_shapekey_tools.mirror_left_right"
-    bl_label = "Mirror Left/Right"
+    bl_label = "Mirror L/R"
     bl_description = "Mirror the current shape key to the other side"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -230,7 +239,7 @@ class XShapeKeyMirrorLeftRightOp(Operator):
     
 class XShapeKeyMirrorLeftRightTopoOp(Operator):
     bl_idname = "xutil_shapekey_tools.mirror_left_right_topo"
-    bl_label = "Mirror Left/Right (Topology)"
+    bl_label = "Mirror L/R (Topo)"
     bl_description = "Mirror the current shape key to the other side"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -255,7 +264,7 @@ def set_all_weight(weight : float):
 
 class XAllShapeKeysToZeroOp(Operator):
     bl_idname = "xutil_shapekey_tools.all_to_zero"
-    bl_label = "all 0"
+    bl_label = "All to 0"
     bl_description = "set all weight to 0"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -267,7 +276,7 @@ class XAllShapeKeysToZeroOp(Operator):
 
 class XAllShapeKeysToOneOp(Operator):
     bl_idname = "xutil_shapekey_tools.all_to_one"
-    bl_label = "all 1"
+    bl_label = "All to 1"
     bl_description = "set all weight to 1"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -287,7 +296,87 @@ class XResetActiveShapeKeyToEmptyOp(Operator):
         reset_active_shapekey_to_empty()
         self.report({'INFO'}, "Active shape key reset to empty")
         return {'FINISHED'}
+    
+class XShapeKeySplitLeftRightOp(Operator):
+    bl_idname = "xutil_shapekey_tools.split_left_right"
+    bl_label = "Split L/R"
+    bl_description = "Split active shape key into Left/Right using position-based mask"
+    bl_options = {'REGISTER', 'UNDO'}
 
+    range : FloatProperty(
+        name="Transition Range",
+        description="How wide (in Blender units) is the left/right blend zone around X=0",
+        default=0.02,
+        min=0.001,
+        max=1.0
+    )
+    method : EnumProperty(
+        name="Blend Type",
+        description="Linear or S-curve ease transition",
+        items=[
+            ('LINEAR', "Linear", "Linear blend"),
+            ('EASE', "Ease", "S-curve (ease) blend"),
+        ],
+        default='LINEAR'
+    )
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        obj = context.active_object
+        if not obj or obj.type != 'MESH' or not obj.active_shape_key or obj.active_shape_key.name == "Basis":
+            self.report({'WARNING'}, "No valid shape key selected")
+            return {'CANCELLED'}
+
+        sk_name = obj.active_shape_key.name
+        mesh = obj.data
+        n = len(mesh.vertices)
+        shape_keys = mesh.shape_keys.key_blocks
+
+        basis = shape_keys["Basis"]
+        src_key = shape_keys[sk_name]
+
+        # 查找/创建 left/right shape key
+        left_name = sk_name + "Left"
+        right_name = sk_name + "Right"
+
+        if left_name in shape_keys:
+            sk_left = shape_keys[left_name]
+        else:
+            sk_left = obj.shape_key_add(name=left_name, from_mix=False)
+        if right_name in shape_keys:
+            sk_right = shape_keys[right_name]
+        else:
+            sk_right = obj.shape_key_add(name=right_name, from_mix=False)
+
+        # 还原到 basis
+        for idx in range(n):
+            sk_left.data[idx].co = basis.data[idx].co
+            sk_right.data[idx].co = basis.data[idx].co
+
+        t_range = self.range
+        for idx, v in enumerate(mesh.vertices):
+            x = v.co.x
+            if x > t_range:
+                left_weight = 1.0
+            elif x < -t_range:
+                left_weight = 0.0
+            else:
+                t = (x + t_range) / (2 * t_range)
+                t = max(0.0, min(1.0, t))
+                if self.method == 'LINEAR':
+                    left_weight = t
+                else:
+                    left_weight = ease(t)
+            right_weight = 1.0 - left_weight
+
+            delta = src_key.data[idx].co - basis.data[idx].co
+            sk_left.data[idx].co += delta * left_weight
+            sk_right.data[idx].co += delta * right_weight
+
+        self.report({'INFO'}, f"ShapeKey {sk_name} 分布到 Left/Right 完成")
+        return {'FINISHED'}
 
 # -------------------------------------------------------------------
 #   UI    
@@ -309,20 +398,17 @@ def draw_ui(self, context):
 
     row = layout.row(align=True)
     row.operator(XCopySelectedShapeKeyOp.bl_idname)
+    row.operator(XApplyActiveShapeKeyToBasisOp.bl_idname, icon="QUESTION")
+    row.operator(XResetActiveShapeKeyToEmptyOp.bl_idname, icon="QUESTION")
 
     row = layout.row(align=True)
-    row.operator(XApplyActiveShapeKeyToBasisOp.bl_idname)
-    row.operator(XResetActiveShapeKeyToEmptyOp.bl_idname)
-
-    row = layout.row(align=True)
+    row.operator(XShapeKeySplitLeftRightOp.bl_idname, icon="MOD_MIRROR")
     row.operator(XShapeKeyMirrorLeftRightOp.bl_idname, icon="MOD_MIRROR")
     row.operator(XShapeKeyMirrorLeftRightTopoOp.bl_idname, icon="MOD_MIRROR")
 
     row = layout.row(align=True)
-    row.operator(XEnableAllShapeKeysOp.bl_idname, icon="RESTRICT_VIEW_OFF")
     row.operator(XDisableAllShapeKeysOp.bl_idname, icon="RESTRICT_VIEW_ON")
-
-    row = layout.row(align=True)
+    row.operator(XEnableAllShapeKeysOp.bl_idname, icon="RESTRICT_VIEW_OFF")
     row.operator(XAllShapeKeysToZeroOp.bl_idname)
     row.operator(XAllShapeKeysToOneOp.bl_idname)
 
