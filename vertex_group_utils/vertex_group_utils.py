@@ -163,6 +163,68 @@ class XSortVertexGroupsAlphabeticallyOp(Operator):
         sort_vertex_groups_alphabetically()
         return {'FINISHED'}
 
+
+# -------------------------------------------------------------------
+#   Mask <-> Active Vertex Group Operators
+# -------------------------------------------------------------------
+
+class XSaveMaskToActiveVertexGroupOp(Operator):
+    bl_idname = "object.x_save_mask_to_active_vg"
+    bl_label = "Save Mask to Active Vertex Group"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        obj = context.active_object
+        if obj.mode != 'SCULPT':
+            self.report({'WARNING'}, "Must be in Sculpt Mode")
+            return {'CANCELLED'}
+
+        vg = obj.vertex_groups.active
+        if not vg:
+            self.report({'WARNING'}, "No active vertex group")
+            return {'CANCELLED'}
+
+        for i, v in enumerate(obj.data.vertices):
+            if hasattr(v, "mask"):
+                w = 1.0 - v.mask  # Sculpt Mask: 1=hidden, VG: 1=selected
+                vg.add([i], w, 'REPLACE')
+
+        self.report({'INFO'}, f"Saved mask to active vertex group '{vg.name}'")
+        return {'FINISHED'}
+
+
+class XLoadMaskFromActiveVertexGroupOp(Operator):
+    bl_idname = "object.x_load_mask_from_active_vg"
+    bl_label = "Load Mask from Active Vertex Group"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        obj = context.active_object
+        if obj.mode != 'SCULPT':
+            self.report({'WARNING'}, "Must be in Sculpt Mode")
+            return {'CANCELLED'}
+
+        vg = obj.vertex_groups.active
+        if not vg:
+            self.report({'WARNING'}, "No active vertex group")
+            return {'CANCELLED'}
+
+        # clear mask first
+        for v in obj.data.vertices:
+            v.mask = 0.0
+
+        # assign from vg weights
+        for i, v in enumerate(obj.data.vertices):
+            try:
+                w = vg.weight(i)
+                v.mask = 1.0 - w
+            except RuntimeError:
+                pass
+
+        self.report({'INFO'}, f"Loaded mask from active vertex group '{vg.name}'")
+        return {'FINISHED'}
+
+
 # -------------------------------------------------------------------
 #   UI    
 # -------------------------------------------------------------------
@@ -204,6 +266,13 @@ def draw_ui(self, context):
 
     row = layout.row()
     row.operator(XSortVertexGroupsAlphabeticallyOp.bl_idname, text="Sort Alphabetically (SLOW!)", icon="SORTALPHA")
+
+    layout.separator()
+
+    row = layout.row(align=True)
+    row.operator(XSaveMaskToActiveVertexGroupOp.bl_idname, text="Save Mask → Active VG", icon="GROUP_VERTEX")
+    row.operator(XLoadMaskFromActiveVertexGroupOp.bl_idname, text="Load Mask ← Active VG", icon="GROUP_VERTEX")
+
 
 # -------------------------------------------------------------------
 # register    

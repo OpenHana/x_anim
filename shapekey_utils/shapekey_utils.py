@@ -24,7 +24,7 @@ def reset_shapekey_to_empty(obj, shapekey_name):
     else:
         print("Object does not have shape keys")
 
-def reset_selected_shapekey_to_empty():
+def reset_active_shapekey_to_empty():
     """将活动对象的活动形状键重置为空形状键."""
 
     active_obj = bpy.context.view_layer.objects.active
@@ -48,6 +48,35 @@ class XCopySelectedShapeKeyOp(Operator):
         copy_sk()
 
         self.report({'INFO'}, "Copied")     
+        return {'FINISHED'}
+    
+class XApplyActiveShapeKeyToBasisOp(Operator):
+    bl_idname = "xutil_shapekey_tools.apply_active_to_basis"
+    bl_label = "Apply to Basis"
+    bl_description = "Apply the current active shape key to Basis using blend_from_shape"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        obj = context.active_object
+        if not obj or not obj.data.shape_keys or not obj.active_shape_key:
+            self.report({'WARNING'}, "No active shape key found")
+            return {'CANCELLED'}
+
+        active_sk = obj.active_shape_key
+        if active_sk.name == 'Basis':
+            self.report({'WARNING'}, "Active shape key is already Basis")
+            return {'CANCELLED'}
+
+        # Set Basis as active
+        basis_index = obj.data.shape_keys.key_blocks.keys().index('Basis')
+        obj.active_shape_key_index = basis_index
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.blend_from_shape(shape=active_sk.name, blend=1.0, add=True)
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        self.report({'INFO'}, f"Applied '{active_sk.name}' to Basis")
         return {'FINISHED'}
     
 def copy_sk() -> bool:
@@ -248,15 +277,15 @@ class XAllShapeKeysToOneOp(Operator):
 
         return {'FINISHED'}
 
-class XResetSelectedShapeKeyToEmptyOp(Operator):
-    bl_idname = "xutil_shapekey_tools.reset_selected_to_empty"
-    bl_label = "Reset Selected to Empty"
-    bl_description = "Reset the selected shape key to empty"
+class XResetActiveShapeKeyToEmptyOp(Operator):
+    bl_idname = "xutil_shapekey_tools.reset_active_to_empty"
+    bl_label = "Reset to Empty"
+    bl_description = "Reset the active shape key to empty"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        reset_selected_shapekey_to_empty()
-        self.report({'INFO'}, "Selected shape key reset to empty")
+        reset_active_shapekey_to_empty()
+        self.report({'INFO'}, "Active shape key reset to empty")
         return {'FINISHED'}
 
 
@@ -282,15 +311,16 @@ def draw_ui(self, context):
     row.operator(XCopySelectedShapeKeyOp.bl_idname)
 
     row = layout.row(align=True)
-    row.operator(XResetSelectedShapeKeyToEmptyOp.bl_idname)
-
-    row = layout.row(align=True)
-    row.operator(XEnableAllShapeKeysOp.bl_idname, icon="RESTRICT_VIEW_OFF")
-    row.operator(XDisableAllShapeKeysOp.bl_idname, icon="RESTRICT_VIEW_ON")
+    row.operator(XApplyActiveShapeKeyToBasisOp.bl_idname)
+    row.operator(XResetActiveShapeKeyToEmptyOp.bl_idname)
 
     row = layout.row(align=True)
     row.operator(XShapeKeyMirrorLeftRightOp.bl_idname, icon="MOD_MIRROR")
     row.operator(XShapeKeyMirrorLeftRightTopoOp.bl_idname, icon="MOD_MIRROR")
+
+    row = layout.row(align=True)
+    row.operator(XEnableAllShapeKeysOp.bl_idname, icon="RESTRICT_VIEW_OFF")
+    row.operator(XDisableAllShapeKeysOp.bl_idname, icon="RESTRICT_VIEW_ON")
 
     row = layout.row(align=True)
     row.operator(XAllShapeKeysToZeroOp.bl_idname)
